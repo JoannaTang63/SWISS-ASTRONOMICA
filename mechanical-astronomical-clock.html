@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>瑞士天文钟 — 机械传动</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0c0c10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Noto Serif SC', 'Cinzel', serif;
+            overflow: hidden;
+            color: #c9b037;
+        }
+
+        .stars {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+        }
+        .star {
+            position: absolute; background: #fff; border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+        @keyframes twinkle { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+        .title {
+            position: relative; z-index: 10;
+            font-size: 1.6rem; font-weight: 700; letter-spacing: 0.35em;
+            color: #c9b037; text-shadow: 0 0 25px rgba(201,176,55,0.25);
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            position: relative; z-index: 10;
+            font-size: 0.75rem; color: #6a6048; letter-spacing: 0.2em;
+            margin-bottom: 24px;
+        }
+
+        .clock-container {
+            position: relative; z-index: 10;
+            display: flex; gap: 36px; align-items: center;
+            flex-wrap: wrap; justify-content: center;
+        }
+
+        .clock-wrapper {
+            position: relative; width: 560px; height: 560px;
+        }
+        svg.clock-svg {
+            width: 100%; height: 100%;
+            filter: drop-shadow(0 0 40px rgba(201,176,55,0.12));
+        }
+
+        /* 瑞士风格控制面板 */
+        .control-panel {
+            position: relative; z-index: 10;
+            background: linear-gradient(160deg, #16161c, #0d0d12);
+            border: 1px solid #2e2818;
+            border-radius: 12px;
+            padding: 22px;
+            width: 300px;
+            box-shadow:
+                0 10px 40px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(201,176,55,0.08);
+        }
+        .panel-title {
+            font-size: 0.95rem; font-weight: 600; color: #c9b037;
+            text-align: center; margin-bottom: 18px;
+            letter-spacing: 0.25em;
+            border-bottom: 1px solid #2e2818; padding-bottom: 10px;
+        }
+
+        .control-group { margin-bottom: 14px; }
+        .control-label {
+            font-size: 0.7rem; color: #6a6048;
+            margin-bottom: 5px; display: block; letter-spacing: 0.1em;
+        }
+
+        .time-inputs {
+            display: flex; gap: 6px; align-items: center;
+        }
+        .time-inputs input {
+            width: 52px; padding: 6px 4px;
+            background: #0a0a10; border: 1px solid #3a3420;
+            border-radius: 6px; color: #c9b037;
+            font-family: 'Cinzel', serif; font-size: 0.9rem;
+            text-align: center;
+        }
+        .time-inputs input:focus {
+            outline: none; border-color: #c9b037;
+            box-shadow: 0 0 8px rgba(201,176,55,0.2);
+        }
+        .time-inputs span { color: #4a4030; font-size: 0.9rem; }
+
+        .btn-row {
+            display: flex; gap: 8px;
+        }
+        .toggle-btn {
+            flex: 1; padding: 9px;
+            background: linear-gradient(145deg, #242028, #16141a);
+            border: 1px solid #3a3420; border-radius: 8px;
+            color: #c9b037;
+            font-family: 'Noto Serif SC', serif; font-size: 0.8rem;
+            cursor: pointer; transition: all 0.25s ease;
+            letter-spacing: 0.08em;
+        }
+        .toggle-btn:hover {
+            background: linear-gradient(145deg, #342e28, #242028);
+            border-color: #c9b037;
+        }
+        .toggle-btn.active {
+            background: linear-gradient(145deg, #3a3420, #2a2520);
+            border-color: #c9b037;
+            box-shadow: inset 0 0 12px rgba(201,176,55,0.15);
+        }
+
+        .speed-slider {
+            width: 100%; height: 5px; border-radius: 3px;
+            background: #1e1a14; outline: none;
+            -webkit-appearance: none;
+        }
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 16px; height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #c9b037, #a8902e);
+            cursor: pointer; box-shadow: 0 0 10px rgba(201,176,55,0.35);
+        }
+        .speed-value {
+            font-size: 0.75rem; color: #c9b037;
+            text-align: right; margin-top: 3px;
+        }
+
+        .info-display {
+            background: #09090e; border: 1px solid #1e1a14;
+            border-radius: 8px; padding: 10px; margin-top: 10px;
+        }
+        .info-row {
+            display: flex; justify-content: space-between;
+            font-size: 0.72rem; color: #5a5040; margin-bottom: 5px;
+        }
+        .info-row:last-child { margin-bottom: 0; }
+        .info-value { color: #c9b037; font-weight: 600; }
+
+        .gear-chain-info {
+            margin-top: 14px; padding-top: 14px;
+            border-top: 1px solid #2e2818;
+        }
+        .gear-chain-title {
+            font-size: 0.7rem; color: #6a6048;
+            text-align: center; margin-bottom: 8px; letter-spacing: 0.1em;
+        }
+        .gear-chain {
+            display: flex; flex-wrap: wrap; gap: 5px;
+            justify-content: center;
+        }
+        .chain-item {
+            font-size: 0.65rem; color: #4a4030;
+            padding: 3px 8px; background: #09090e;
+            border-radius: 4px; text-align: center;
+            border: 1px solid #1a1814;
+        }
+        .chain-item span { color: #c9b037; }
+
+        /* 响应式 */
+        @media (max-width: 920px) {
+            .clock-container { flex-direction: column; }
+            .clock-wrapper { width: 400px; height: 400px; }
+            .control-panel { width: 400px; }
+        }
+        @media (max-width: 480px) {
+            .clock-wrapper { width: 320px; height: 320px; }
+            .control-panel { width: 320px; }
+            .title { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+
+    <div class="title">SWISS ASTRONOMICA</div>
+    <div class="subtitle">瑞士天文钟 · 机械传动</div>
+
+    <div class="clock-container">
+        <div class="clock-wrapper">
+            <svg class="clock-svg" viewBox="0 0 560 560" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- 瑞士金渐变 -->
+                    <linearGradient id="swiss-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#f0e2a8"/>
+                        <stop offset="25%" stop-color="#c9b037"/>
+                        <stop offset="55%" stop-color="#a8902e"/>
+                        <stop offset="85%" stop-color="#7a6a20"/>
+                        <stop offset="100%" stop-color="#5a4e18"/>
+                    </linearGradient>
+                    <linearGradient id="swiss-gold-light" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#fff8dc"/>
+                        <stop offset="40%" stop-color="#c9b037"/>
+                        <stop offset="100%" stop-color="#8a7a28"/>
+                    </linearGradient>
+                    <linearGradient id="rhodium" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#e0e0e0"/>
+                        <stop offset="50%" stop-color="#a0a0a0"/>
+                        <stop offset="100%" stop-color="#606060"/>
+                    </linearGradient>
+                    <linearGradient id="blued-steel" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#4a6a8a"/>
+                        <stop offset="50%" stop-color="#2a4a6a"/>
+                        <stop offset="100%" stop-color="#1a2a3a"/>
+                    </linearGradient>
+                    <radialGradient id="dial-grad" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#141418"/>
+                        <stop offset="60%" stop-color="#0a0a0e"/>
+                        <stop offset="100%" stop-color="#030305"/>
+                    </radialGradient>
+                    <radialGradient id="perlage" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#18181c"/>
+                        <stop offset="100%" stop-color="#0a0a0e"/>
+                    </radialGradient>
+                    <filter id="dropShadow">
+                        <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
+                    </filter>
+                    <filter id="softGlow">
+                        <feGaussianBlur stdDeviation="1.5" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+
+                <!-- ========== 机芯底板 (瑞士风格日内瓦条纹) ========== -->
+                <circle cx="280" cy="280" r="270" fill="url(#perlage)" stroke="url(#swiss-gold)" stroke-width="2" opacity="0.3"/>
+                <circle cx="280" cy="280" r="265" fill="none" stroke="#1a1a1e" stroke-width="1"/>
+
+                <!-- ========== 齿轮传动系 (真实机械布局) ========== -->
+                <!-- 
+                    传动链: 发条桶(G1) → 中心轮(G2, 分针) → 过轮(G3) → 三轮(G4) → 秒轮(G5)
+                                         ↓
+                                   时轮(G6, 时针) 
+                    辅助: 月相轮(G7)
+                -->
+
+                <!-- G1: 发条桶 (主动力源, 大轮, 左上) -->
+                <g id="gear-barrel" transform="translate(160, 160)">
+                    <circle cx="0" cy="0" r="48" fill="none" stroke="url(#swiss-gold)" stroke-width="2.5"/>
+                    <g class="gear-teeth" data-teeth="20" data-radius="48" data-color="swiss-gold"></g>
+                    <!-- 发条桶装饰 -->
+                    <circle cx="0" cy="0" r="38" fill="none" stroke="#2a2520" stroke-width="0.5"/>
+                    <circle cx="0" cy="0" r="28" fill="none" stroke="#2a2520" stroke-width="0.5"/>
+                    <circle cx="0" cy="0" r="18" fill="none" stroke="#2a2520" stroke-width="0.5"/>
+                    <circle cx="0" cy="0" r="10" fill="url(#dial-grad)" stroke="url(#swiss-gold)" stroke-width="1.5"/>
+                    <text x="0" y="3" text-anchor="middle" fill="#c9b037" font-size="8" font-family="Cinzel">BARREL</text>
+                </g>
+
+                <!-- G2: 中心轮 (分针轮, 中心大轮) -->
+                <g id="gear-center" transform="translate(280, 280)">
+                    <circle cx="0" cy="0" r="55" fill="none" stroke="url(#swiss-gold-light)" stroke-width="2"/>
+                    <g class="gear-teeth" data-teeth="24" data-radius="55" data-color="swiss-gold-light"></g>
+                    <!-- 轮辐 -->
+                    <g stroke="#2a2520" stroke-width="1" opacity="0.6">
+                        <line x1="0" y1="-45" x2="0" y2="45"/>
+                        <line x1="-39" y1="-22.5" x2="39" y2="22.5"/>
+                        <line x1="-39" y1="22.5" x2="39" y2="-22.5"/>
+                    </g>
+                    <circle cx="0" cy="0" r="15" fill="url(#dial-grad)" stroke="url(#swiss-gold)" stroke-width="2"/>
+                </g>
+
+                <!-- G3: 过轮 (中间传动, 右上) -->
+                <g id="gear-third" transform="translate(400, 200)">
+                    <circle cx="0" cy="0" r="32" fill="none" stroke="url(#rhodium)" stroke-width="2"/>
+                    <g class="gear-teeth" data-teeth="14" data-radius="32" data-color="rhodium"></g>
+                    <circle cx="0" cy="0" r="8" fill="url(#dial-grad)" stroke="url(#rhodium)" stroke-width="1"/>
+                </g>
+
+                <!-- G4: 三轮 (右下) -->
+                <g id="gear-fourth" transform="translate(420, 340)">
+                    <circle cx="0" cy="0" r="28" fill="none" stroke="url(#blued-steel)" stroke-width="2"/>
+                    <g class="gear-teeth" data-teeth="12" data-radius="28" data-color="blued-steel"></g>
+                    <circle cx="0" cy="0" r="7" fill="url(#dial-grad)" stroke="url(#blued-steel)" stroke-width="1"/>
+                </g>
+
+                <!-- G5: 秒轮 (小轮, 底部) -->
+                <g id="gear-escape" transform="translate(340, 440)">
+                    <circle cx="0" cy="0" r="20" fill="none" stroke="url(#swiss-gold)" stroke-width="1.5"/>
+                    <g class="gear-teeth" data-teeth="8" data-radius="20" data-color="swiss-gold"></g>
+                    <!-- 擒纵叉示意 -->
+                    <path d="M -4,-12 L 4,-12 L 2,12 L -2,12 Z" fill="url(#blued-steel)" opacity="0.8"/>
+                    <circle cx="0" cy="0" r="5" fill="url(#dial-grad)" stroke="url(#swiss-gold)" stroke-width="1"/>
+                </g>
+
+                <!-- G6: 时轮 (中心上方小轮, 与中心轮同轴但不同速) -->
+                <g id="gear-hour-wheel" transform="translate(280, 200)">
+                    <circle cx="0" cy="0" r="22" fill="none" stroke="url(#rhodium)" stroke-width="1.5"/>
+                    <g class="gear-teeth" data-teeth="10" data-radius="22" data-color="rhodium"></g>
+                    <circle cx="0" cy="0" r="6" fill="url(#dial-grad)" stroke="url(#rhodium)" stroke-width="1"/>
+                </g>
+
+                <!-- G7: 月相轮 (左下) -->
+                <g id="gear-moon" transform="translate(140, 400)">
+                    <circle cx="0" cy="0" r="26" fill="none" stroke="url(#swiss-gold)" stroke-width="1.5"/>
+                    <g class="gear-teeth" data-teeth="11" data-radius="26" data-color="swiss-gold"></g>
+                    <circle cx="0" cy="0" r="7" fill="url(#dial-grad)" stroke="url(#swiss-gold)" stroke-width="1"/>
+                </g>
+
+                <!-- 传动轴示意线 -->
+                <g stroke="#2a2520" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5">
+                    <!-- 发条桶到中心轮 -->
+                    <line x1="160" y1="160" x2="225" y2="225"/>
+                    <!-- 中心轮到过轮 -->
+                    <line x1="335" y1="235" x2="368" y2="200"/>
+                    <!-- 过轮到三轮 -->
+                    <line x1="400" y1="232" x2="420" y2="312"/>
+                    <!-- 三轮到秒轮 -->
+                    <line x1="420" y1="368" x2="358" y2="420"/>
+                    <!-- 中心轮到时针轮 -->
+                    <line x1="280" y1="225" x2="280" y2="258"/>
+                    <!-- 中心轮到月相轮 -->
+                    <line x1="225" y1="335" x2="166" y2="400"/>
+                </g>
+
+                <!-- ========== 表盘 (五层同心圆) ========== -->
+                <!-- 最外圈: 分钟轨道 -->
+                <circle cx="280" cy="280" r="248" fill="none" stroke="url(#swiss-gold)" stroke-width="1" opacity="0.4"/>
+                <g id="minute-ticks"></g>
+
+                <!-- 第二层: 小时环 -->
+                <circle cx="280" cy="280" r="210" fill="none" stroke="url(#swiss-gold)" stroke-width="1.5" opacity="0.5"/>
+                <g id="hour-ring"></g>
+
+                <!-- 第三层: 日期环 -->
+                <circle cx="280" cy="280" r="172" fill="none" stroke="#2a2520" stroke-width="1"/>
+                <g id="date-ring"></g>
+
+                <!-- 第四层: 星座/月相环 -->
+                <circle cx="280" cy="280" r="134" fill="none" stroke="url(#swiss-gold)" stroke-width="1" opacity="0.3"/>
+                <g id="zodiac-ring"></g>
+
+                <!-- 中心盘 -->
+                <circle cx="280" cy="280" r="96" fill="url(#dial-grad)" stroke="url(#swiss-gold)" stroke-width="1.5"/>
+
+                <!-- 月相显示窗 (瑞士表常见布局: 6点位置) -->
+                <g transform="translate(280, 370)">
+                    <circle cx="0" cy="0" r="32" fill="#08080c" stroke="url(#swiss-gold)" stroke-width="1.5"/>
+                    <circle cx="0" cy="0" r="28" fill="#0a0a15"/>
+                    <path id="moon-phase-path" fill="#e8dcc8"/>
+                    <text x="0" y="46" text-anchor="middle" fill="#5a5040" font-size="7" font-family="Noto Serif SC" letter-spacing="0.15em">月相</text>
+                </g>
+
+                <!-- 品牌文字 (瑞士表风格) -->
+                <text x="280" y="260" text-anchor="middle" fill="#c9b037" font-size="10" font-family="Cinzel" letter-spacing="0.3em" opacity="0.7">ASTRONOMICA</text>
+                <text x="280" y="274" text-anchor="middle" fill="#4a4030" font-size="6" font-family="Noto Serif SC" letter-spacing="0.2em">日内瓦 · 天文认证</text>
+
+                <!-- ========== 指针 (瑞士蓝钢指针风格) ========== -->
+                <g id="hands">
+                    <!-- 时针: 宝玑式蓝钢 -->
+                    <g id="hand-hour">
+                        <path d="M 278,280 L 278,195 Q 280,190 282,195 L 282,280 Z" fill="url(#blued-steel)" filter="url(#dropShadow)"/>
+                        <circle cx="280" cy="192" r="2.5" fill="url(#swiss-gold)"/>
+                        <circle cx="280" cy="280" r="4" fill="url(#blued-steel)"/>
+                    </g>
+                    <!-- 分针: 细长蓝钢 -->
+                    <g id="hand-minute">
+                        <path d="M 279,280 L 279,140 Q 280,135 281,140 L 281,280 Z" fill="url(#blued-steel)" filter="url(#dropShadow)"/>
+                        <circle cx="280" cy="137" r="2" fill="url(#swiss-gold)"/>
+                    </g>
+                    <!-- 秒针: 经典细长红针 -->
+                    <g id="hand-second">
+                        <line x1="280" y1="300" x2="280" y2="115" stroke="#b03030" stroke-width="0.8" stroke-linecap="round"/>
+                        <circle cx="280" cy="112" r="1.5" fill="#b03030"/>
+                        <circle cx="280" cy="280" r="2" fill="#b03030"/>
+                        <!-- 平衡锤 -->
+                        <circle cx="280" cy="305" r="4" fill="none" stroke="#b03030" stroke-width="0.8"/>
+                    </g>
+                </g>
+
+                <!-- 中心宝石轴承 -->
+                <circle cx="280" cy="280" r="5" fill="#800020" stroke="url(#swiss-gold)" stroke-width="1.5" filter="url(#softGlow)"/>
+                <circle cx="280" cy="280" r="2" fill="#a00030"/>
+
+                <!-- 动力储存指示 (瑞士表经典元素, 10点位置) -->
+                <g transform="translate(170, 170)">
+                    <path d="M 0,-25 A 25,25 0 0,1 21.65,-12.5" fill="none" stroke="#2a2520" stroke-width="2" stroke-linecap="round"/>
+                    <path id="power-reserve" d="M 0,-25 A 25,25 0 0,1 0,-25" fill="none" stroke="url(#swiss-gold)" stroke-width="2" stroke-linecap="round"/>
+                    <text x="0" y="-32" text-anchor="middle" fill="#4a4030" font-size="5" font-family="Noto Serif SC">动力</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <div class="panel-title">机芯调校</div>
+
+            <div class="control-group">
+                <label class="control-label">设置时间</label>
+                <div class="time-inputs">
+                    <input type="number" id="setHour" min="0" max="23" value="12" placeholder="时">
+                    <span>:</span>
+                    <input type="number" id="setMinute" min="0" max="59" value="0" placeholder="分">
+                    <span>:</span>
+                    <input type="number" id="setSecond" min="0" max="59" value="0" placeholder="秒">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">设置日期</label>
+                <div class="time-inputs">
+                    <input type="number" id="setYear" min="1900" max="2100" value="2026" style="width:60px">
+                    <span>-</span>
+                    <input type="number" id="setMonth" min="1" max="12" value="6">
+                    <span>-</span>
+                    <input type="number" id="setDay" min="1" max="31" value="18">
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="toggle-btn" id="applyTimeBtn">应用时间</button>
+                <button class="toggle-btn" id="useSystemBtn">取系统时间</button>
+            </div>
+
+            <div class="control-group" style="margin-top:14px">
+                <label class="control-label">机芯运转速度</label>
+                <input type="range" class="speed-slider" id="speedSlider" min="0" max="50" value="10">
+                <div class="speed-value" id="speedValue">1.0x</div>
+            </div>
+
+            <div class="btn-row">
+                <button class="toggle-btn" id="pauseBtn">暂停</button>
+                <button class="toggle-btn" id="showTransmissionBtn">传动高亮</button>
+            </div>
+
+            <div class="info-display">
+                <div class="info-row">
+                    <span>显示时间</span>
+                    <span class="info-value" id="dispTime">12:00:00</span>
+                </div>
+                <div class="info-row">
+                    <span>日期</span>
+                    <span class="info-value" id="dispDate">2026/06/18</span>
+                </div>
+                <div class="info-row">
+                    <span>星期</span>
+                    <span class="info-value" id="dispWeekday">周四</span>
+                </div>
+                <div class="info-row">
+                    <span>月相</span>
+                    <span class="info-value" id="dispMoon">-</span>
+                </div>
+                <div class="info-row">
+                    <span>动力储存</span>
+                    <span class="info-value" id="dispPower">100%</span>
+                </div>
+            </div>
+
+            <div class="gear-chain-info">
+                <div class="gear-chain-title">传动链状态</div>
+                <div class="gear-chain">
+                    <div class="chain-item">发条桶 <span id="st-barrel">●</span></div>
+                    <div class="chain-item">中心轮 <span id="st-center">●</span></div>
+                    <div class="chain-item">过轮 <span id="st-third">●</span></div>
+                    <div class="chain-item">三轮 <span id="st-fourth">●</span></div>
+                    <div class="chain-item">秒轮 <span id="st-escape">●</span></div>
+                    <div class="chain-item">时轮 <span id="st-hour">●</span></div>
+                    <div class="chain-item">月相 <span id="st-moon">●</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 星空背景 ====================
+        function createStars() {
+            const container = document.getElementById('stars');
+            for (let i = 0; i < 120; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                const s = Math.random() * 1.5 + 0.5;
+                star.style.width = s + 'px';
+                star.style.height = s + 'px';
+                star.style.animationDelay = Math.random() * 4 + 's';
+                star.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                container.appendChild(star);
+            }
+        }
+        createStars();
+
+        // ==================== 生成齿轮齿 (真实齿形) ====================
+        function createGearTeeth() {
+            document.querySelectorAll('.gear-teeth').forEach(gear => {
+                const teeth = parseInt(gear.dataset.teeth);
+                const radius = parseInt(gear.dataset.radius);
+                const colorId = gear.dataset.color || 'swiss-gold';
+                const toothH = 5;
+                const toothW = (2 * Math.PI * radius) / teeth * 0.45;
+
+                for (let i = 0; i < teeth; i++) {
+                    const angle = (i / teeth) * 360;
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', -toothW / 2);
+                    rect.setAttribute('y', -radius - toothH);
+                    rect.setAttribute('width', toothW);
+                    rect.setAttribute('height', toothH + 1);
+                    rect.setAttribute('fill', 'none');
+                    rect.setAttribute('stroke', `url(#${colorId})`);
+                    rect.setAttribute('stroke-width', '1');
+                    rect.setAttribute('transform', `rotate(${angle})`);
+                    gear.appendChild(rect);
+                }
+            });
+        }
+        createGearTeeth();
+
+        // ==================== 生成表盘刻度 ====================
+        function createMinuteTicks() {
+            const g = document.getElementById('minute-ticks');
+            for (let i = 0; i < 60; i++) {
+                const angle = (i / 60) * 360 - 90;
+                const rad = angle * Math.PI / 180;
+                const isMain = i % 5 === 0;
+                const r1 = isMain ? 228 : 233;
+                const r2 = 246;
+                const x1 = 280 + r1 * Math.cos(rad);
+                const y1 = 280 + r1 * Math.sin(rad);
+                const x2 = 280 + r2 * Math.cos(rad);
+                const y2 = 280 + r2 * Math.sin(rad);
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+                line.setAttribute('stroke', isMain ? 'url(#swiss-gold)' : '#3a3420');
+                line.setAttribute('stroke-width', isMain ? '2.5' : '1');
+                line.setAttribute('stroke-linecap', 'round');
+                g.appendChild(line);
+            }
+            // 分钟数字
+            for (let i = 0; i < 12; i++) {
+                const num = i * 5;
+                const angle = (i / 12) * 360 - 90;
+                const rad = angle * Math.PI / 180;
+                const r = 216;
+                const x = 280 + r * Math.cos(rad);
+                const y = 280 + r * Math.sin(rad);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x); text.setAttribute('y', y + 3);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#5a5040');
+                text.setAttribute('font-size', '9');
+                text.setAttribute('font-family', 'Cinzel');
+                text.textContent = num.toString().padStart(2, '0');
+                g.appendChild(text);
+            }
+        }
+        createMinuteTicks();
+
+        function createHourRing() {
+            const g = document.getElementById('hour-ring');
+            const romans = ['XII','I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * 360 - 90;
+                const rad = angle * Math.PI / 180;
+                const r = 182;
+                const x = 280 + r * Math.cos(rad);
+                const y = 280 + r * Math.sin(rad);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x); text.setAttribute('y', y + 5);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', 'url(#swiss-gold)');
+                text.setAttribute('font-size', '16');
+                text.setAttribute('font-family', 'Cinzel');
+                text.setAttribute('font-weight', '600');
+                text.textContent = romans[i];
+                g.appendChild(text);
+            }
+        }
+        createHourRing();
+
+        function createDateRing() {
+            const g = document.getElementById('date-ring');
+            for (let i = 1; i <= 31; i++) {
+                const angle = ((i - 1) / 31) * 360 - 90;
+                const rad = angle * Math.PI / 180;
+                const r = 150;
+                const x = 280 + r * Math.cos(rad);
+                const y = 280 + r * Math.sin(rad);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x); text.setAttribute('y', y + 2);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#4a4030');
+                text.setAttribute('font-size', '7');
+                text.setAttribute('font-family', 'Cinzel');
+                text.textContent = i;
+                g.appendChild(text);
+            }
+        }
+        createDateRing();
+
+        function createZodiacRing() {
+            const g = document.getElementById('zodiac-ring');
+            const symbols = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * 360 - 90;
+                const rad = angle * Math.PI / 180;
+                const r = 112;
+                const x = 280 + r * Math.cos(rad);
+                const y = 280 + r * Math.sin(rad);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x); text.setAttribute('y', y + 4);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#5a5048');
+                text.setAttribute('font-size', '12');
+                text.textContent = symbols[i];
+                g.appendChild(text);
+            }
+        }
+        createZodiacRing();
+
+        // ==================== 月相计算 ====================
+        function getMoonPhase(date) {
+            let y = date.getFullYear();
+            let m = date.getMonth() + 1;
+            const d = date.getDate();
+            if (m < 3) { y--; m += 12; }
+            const c = 365.25 * y;
+            const e = 30.6 * m;
+            let jd = c + e + d - 694039.09;
+            jd /= 29.5305882;
+            const b = parseInt(jd);
+            const frac = jd - b;
+            const phaseIdx = Math.round(frac * 8) & 7;
+            const names = ['新月','蛾眉月','上弦月','盈凸月','满月','亏凸月','下弦月','残月'];
+            return { name: names[phaseIdx], fraction: frac };
+        }
+
+        function updateMoonPhaseDisplay(date) {
+            const moon = getMoonPhase(date);
+            const frac = moon.fraction;
+            const r = 26;
+            let d = '';
+            if (frac < 0.5) {
+                const sweep = frac < 0.25 ? 0 : 1;
+                const rx = r * Math.cos((frac - 0.25) * 2 * Math.PI);
+                d = `M 0,-${r} A ${r} ${r} 0 0 1 0,${r} A ${Math.abs(rx)} ${r} 0 0 ${sweep} 0,-${r} Z`;
+            } else {
+                const sweep = frac < 0.75 ? 1 : 0;
+                const rx = r * Math.cos((frac - 0.75) * 2 * Math.PI);
+                d = `M 0,-${r} A ${r} ${r} 0 0 0 0,${r} A ${Math.abs(rx)} ${r} 0 0 ${sweep} 0,-${r} Z`;
+            }
+            document.getElementById('moon-phase-path').setAttribute('d', d);
+            document.getElementById('dispMoon').textContent = moon.name;
+        }
+
+        // ==================== 真实齿轮传动系 ====================
+        /*
+         传动比设计 (基于真实机械表):
+         - 发条桶 (G1, 20齿) → 中心轮 (G2, 64齿隐含分针): 减速比 ~1:3.2
+         - 中心轮轴上小齿轮 (8齿) → 过轮 (G3, 32齿): 1:4
+         - 过轮轴上小齿轮 (8齿) → 三轮 (G4, 30齿): 1:3.75
+         - 三轮轴上小齿轮 (8齿) → 秒轮 (G5, 20齿): 1:2.5
+         总减速: 分针转1圈 → 秒轮转60圈 ✓
+         
+         时针: 中心轮 → 时轮(G6) 减速 1:12
+         月相: 时轮 → 月相轮(G7) 减速, 约29.5天一圈
+        */
+
+        const GEAR_CONFIG = {
+            barrel:   { teeth: 20, baseSpeed: 0.02,  el: 'gear-barrel' },
+            center:   { teeth: 24, baseSpeed: 0,      el: 'gear-center' },   // 由barrel驱动
+            third:    { teeth: 14, baseSpeed: 0,      el: 'gear-third' },    // 由center驱动
+            fourth:   { teeth: 12, baseSpeed: 0,      el: 'gear-fourth' },   // 由third驱动
+            escape:   { teeth: 8,  baseSpeed: 0,      el: 'gear-escape' },   // 由fourth驱动
+            hour:     { teeth: 10, baseSpeed: 0,      el: 'gear-hour-wheel' }, // 由center驱动
+            moon:     { teeth: 11, baseSpeed: 0,      el: 'gear-moon' },     // 由hour驱动
+        };
+
+        // 计算传动比
+        // barrel → center: 20/64 = 0.3125 (但barrel很慢, center是分钟轮)
+        // 实际上: barrel转1圈 = 8小时, center转1圈 = 1小时
+        // 所以 centerSpeed = barrelSpeed * (barrelTeeth / centerPinion) = barrelSpeed * (20/8) = 2.5x
+        // 但barrel本身极慢, 我们用简化模型: center由时间直接驱动, 其他齿轮按传动比联动
+
+        // 真实联动: 以"秒"为基准
+        // 秒轮(escape)转360° = 60秒
+        // fourth驱动escape: fourth转 = escape转 * (escapeTeeth / fourthPinion)
+        // third驱动fourth
+        // center驱动third
+        // barrel驱动center (极慢)
+        // hour由center通过12:1减速驱动
+        // moon由hour驱动
+
+        const gearAngles = {
+            barrel: 0, center: 0, third: 0, fourth: 0,
+            escape: 0, hour: 0, moon: 0
+        };
+
+        // 传动比 (驱动轮齿数 / 从动轮齿数)
+        const RATIOS = {
+            center_from_barrel: 20 / 8,   // barrel齿 / center小齿
+            third_from_center: 8 / 14,     // center小齿 / third齿
+            fourth_from_third: 8 / 12,     // third小齿 / fourth齿
+            escape_from_fourth: 8 / 8,     // fourth小齿 / escape齿
+            hour_from_center: 8 / 10,      // center小齿 / hour齿 (再乘12用于时针减速)
+            moon_from_hour: 1 / 11,        // hour驱动moon
+        };
+
+        let customTime = null;      // 手动设置的时间
+        let useSystem = true;       // 是否使用系统时间
+        let isPaused = false;
+        let speedMult = 1.0;
+        let highlightOn = false;
+        let powerReserve = 100;     // 动力储存百分比
+        let lastTimestamp = 0;
+
+        function updateGearTrain(elapsedSec) {
+            // 以秒轮为基准: 60秒转360°
+            const secDeg = elapsedSec * 6 * speedMult; // 每秒6度
+
+            // 从秒轮反推上游 (为了视觉效果, 让齿轮看起来在传动)
+            // escape (秒轮) 转 secDeg
+            gearAngles.escape = secDeg;
+
+            // fourth 转 = escape转 * (escape齿 / fourth小齿) = secDeg * (8/8) = secDeg
+            // 但方向相反
+            gearAngles.fourth = -secDeg * (8 / 12);
+
+            // third 转 = fourth转 * (fourth齿 / third小齿) 
+            gearAngles.third = -gearAngles.fourth * (12 / 8);
+
+            // center 转 = third转 * (third齿 / center小齿)
+            // center是分钟轮, 60分钟转360°, 即1分钟转6°
+            // 所以 centerDeg = elapsedSec * 0.1 * speedMult
+            const centerDeg = elapsedSec * 0.1 * speedMult;
+            gearAngles.center = centerDeg;
+
+            // barrel 转极慢 (8小时一圈 = 28800秒)
+            gearAngles.barrel = elapsedSec * (360 / 28800) * speedMult;
+
+            // hour轮: center通过12:1减速
+            // 时针 = 分针 / 12
+            gearAngles.hour = centerDeg / 12;
+
+            // moon轮: 约29.5天一圈
+            gearAngles.moon = elapsedSec * (360 / (29.5 * 24 * 3600)) * speedMult;
+
+            // 应用旋转
+            applyGearRotation('gear-barrel', gearAngles.barrel, 160, 160);
+            applyGearRotation('gear-center', gearAngles.center, 280, 280);
+            applyGearRotation('gear-third', gearAngles.third, 400, 200);
+            applyGearRotation('gear-fourth', gearAngles.fourth, 420, 340);
+            applyGearRotation('gear-escape', gearAngles.escape, 340, 440);
+            applyGearRotation('gear-hour-wheel', gearAngles.hour, 280, 200);
+            applyGearRotation('gear-moon', gearAngles.moon, 140, 400);
+        }
+
+        function applyGearRotation(id, angle, tx, ty) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.setAttribute('transform', `translate(${tx}, ${ty}) rotate(${angle})`);
+            }
+        }
+
+        function updateHands(h, m, s) {
+            const hourAngle = (h % 12) * 30 + m * 0.5;
+            const minuteAngle = m * 6 + s * 0.1;
+            const secondAngle = s * 6;
+
+            document.getElementById('hand-hour').setAttribute('transform', `rotate(${hourAngle}, 280, 280)`);
+            document.getElementById('hand-minute').setAttribute('transform', `rotate(${minuteAngle}, 280, 280)`);
+            document.getElementById('hand-second').setAttribute('transform', `rotate(${secondAngle}, 280, 280)`);
+        }
+
+        function updatePowerReserve() {
+            // 动力储存随时间缓慢下降
+            if (!isPaused && powerReserve > 0) {
+                powerReserve -= 0.001 * speedMult;
+                if (powerReserve < 0) powerReserve = 0;
+            }
+            document.getElementById('dispPower').textContent = Math.round(powerReserve) + '%';
+
+            // 更新动力储存弧形指示器
+            const maxAngle = 60; // 60度弧
+            const currentAngle = maxAngle * (powerReserve / 100);
+            const rad = (currentAngle - 90) * Math.PI / 180;
+            const x = 25 * Math.cos(rad);
+            const y = 25 * Math.sin(rad);
+            const largeArc = currentAngle > 180 ? 1 : 0;
+            const d = `M 0,-25 A 25,25 0 ${largeArc},1 ${x},${y}`;
+            document.getElementById('power-reserve').setAttribute('d', d);
+        }
+
+        function formatTime(d) {
+            const h = d.getHours().toString().padStart(2, '0');
+            const m = d.getMinutes().toString().padStart(2, '0');
+            const s = d.getSeconds().toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function formatDate(d) {
+            return `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+        }
+
+        function getWeekday(d) {
+            return ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+        }
+
+        // ==================== 主循环 ====================
+        let totalElapsed = 0;
+
+        function tick(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const delta = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            if (!isPaused) {
+                totalElapsed += delta * speedMult;
+            }
+
+            let now;
+            if (useSystem) {
+                now = new Date();
+                // 用系统时间初始化 totalElapsed (仅第一次)
+                if (totalElapsed === 0) {
+                    totalElapsed = Math.floor(now.getTime() / 1000);
+                }
+            } else if (customTime) {
+                // 手动时间模式下，totalElapsed 是设置时刻的 Unix 时间戳
+                // 加上流逝的时间得到当前显示时间
+                now = new Date(totalElapsed * 1000);
+            } else {
+                now = new Date();
+            }
+
+            // 更新齿轮传动
+            updateGearTrain(totalElapsed);
+
+            // 更新指针
+            updateHands(now.getHours(), now.getMinutes(), now.getSeconds());
+
+            // 更新月相
+            updateMoonPhaseDisplay(now);
+
+            // 更新动力储存
+            updatePowerReserve();
+
+            // 更新显示
+            document.getElementById('dispTime').textContent = formatTime(now);
+            document.getElementById('dispDate').textContent = formatDate(now);
+            document.getElementById('dispWeekday').textContent = getWeekday(now);
+
+            // 传动状态指示灯
+            const statusColor = isPaused ? '#3a3020' : '#c9b037';
+            ['st-barrel','st-center','st-third','st-fourth','st-escape','st-hour','st-moon'].forEach(id => {
+                document.getElementById(id).style.color = statusColor;
+            });
+
+            requestAnimationFrame(tick);
+        }
+
+        // ==================== 控制面板事件 ====================
+        document.getElementById('applyTimeBtn').addEventListener('click', () => {
+            const h = parseInt(document.getElementById('setHour').value) || 0;
+            const m = parseInt(document.getElementById('setMinute').value) || 0;
+            const s = parseInt(document.getElementById('setSecond').value) || 0;
+            const y = parseInt(document.getElementById('setYear').value) || 2026;
+            const mo = parseInt(document.getElementById('setMonth').value) || 1;
+            const d = parseInt(document.getElementById('setDay').value) || 1;
+
+            customTime = new Date(y, mo - 1, d, h, m, s);
+            useSystem = false;
+            // 从1970年1月1日开始的总秒数，确保日期和时间都被保留
+            totalElapsed = Math.floor(customTime.getTime() / 1000);
+            powerReserve = 100;
+
+            document.getElementById('useSystemBtn').classList.remove('active');
+            document.getElementById('applyTimeBtn').classList.add('active');
+        });
+
+        document.getElementById('useSystemBtn').addEventListener('click', () => {
+            useSystem = true;
+            customTime = null;
+            totalElapsed = 0;
+            powerReserve = 100;
+            document.getElementById('applyTimeBtn').classList.remove('active');
+            document.getElementById('useSystemBtn').classList.add('active');
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            const v = parseInt(e.target.value);
+            speedMult = v / 10;
+            document.getElementById('speedValue').textContent = speedMult.toFixed(1) + 'x';
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', function() {
+            isPaused = !isPaused;
+            this.textContent = isPaused ? '继续' : '暂停';
+            this.classList.toggle('active', isPaused);
+        });
+
+        document.getElementById('showTransmissionBtn').addEventListener('click', function() {
+            highlightOn = !highlightOn;
+            this.textContent = highlightOn ? '隐藏传动' : '传动高亮';
+            this.classList.toggle('active', highlightOn);
+
+            // 高亮传动轴
+            document.querySelectorAll('line[stroke-dasharray]').forEach(line => {
+                line.setAttribute('stroke', highlightOn ? 'url(#swiss-gold)' : '#2a2520');
+                line.setAttribute('opacity', highlightOn ? '0.8' : '0.5');
+                line.setAttribute('stroke-width', highlightOn ? '1.5' : '0.8');
+            });
+
+            // 齿轮发光
+            document.querySelectorAll('.gear-teeth rect').forEach(rect => {
+                rect.setAttribute('stroke-width', highlightOn ? '2' : '1');
+            });
+        });
+
+        // 启动
+        requestAnimationFrame(tick);
+    </script>
+</body>
+</html>
