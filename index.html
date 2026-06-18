@@ -167,16 +167,124 @@
         }
         .chain-item span { color: #c9b037; }
 
+        /* ========== 移动端底部抽屉式控制面板 ========== */
+        .panel-toggle {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 100;
+            background: linear-gradient(180deg, rgba(12,12,16,0) 0%, rgba(12,12,16,0.95) 40%, #0c0c10 100%);
+            padding: 30px 16px 16px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .panel-toggle-bar {
+            width: 40px; height: 4px;
+            background: #3a3420;
+            border-radius: 2px;
+            margin: 0 auto 8px;
+            transition: background 0.3s;
+        }
+        .panel-toggle:hover .panel-toggle-bar {
+            background: #c9b037;
+        }
+        .panel-toggle-text {
+            font-size: 0.7rem; color: #6a6048;
+            letter-spacing: 0.15em;
+        }
+
+        /* 遮罩层 */
+        .panel-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 90;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .panel-overlay.open {
+            display: block;
+            opacity: 1;
+        }
+
         /* 响应式 */
         @media (max-width: 920px) {
-            .clock-container { flex-direction: column; }
+            .clock-container { flex-direction: column; gap: 20px; }
             .clock-wrapper { width: 400px; height: 400px; }
             .control-panel { width: 400px; }
         }
-        @media (max-width: 480px) {
-            .clock-wrapper { width: 320px; height: 320px; }
-            .control-panel { width: 320px; }
-            .title { font-size: 1.2rem; }
+
+        @media (max-width: 640px) {
+            body {
+                justify-content: flex-start;
+                padding-top: 20px;
+                padding-bottom: 80px;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            .clock-wrapper {
+                width: 92vw; height: 92vw;
+                max-width: 380px; max-height: 380px;
+            }
+            .control-panel {
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                width: 100%;
+                max-height: 75vh;
+                border-radius: 20px 20px 0 0;
+                border: none;
+                border-top: 1px solid #2e2818;
+                padding: 20px 20px 30px;
+                z-index: 95;
+                transform: translateY(calc(100% - 60px));
+                transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .control-panel.open {
+                transform: translateY(0);
+            }
+            .panel-toggle {
+                display: block;
+            }
+            .title { font-size: 1.1rem; letter-spacing: 0.2em; }
+            .subtitle { font-size: 0.65rem; margin-bottom: 16px; }
+
+            /* 增大触控区域 */
+            .time-inputs input {
+                width: 58px; padding: 10px 4px;
+                font-size: 1rem; min-height: 44px;
+            }
+            .toggle-btn {
+                padding: 12px;
+                font-size: 0.9rem; min-height: 44px;
+            }
+            .speed-slider {
+                height: 8px;
+            }
+            .speed-slider::-webkit-slider-thumb {
+                width: 22px; height: 22px;
+            }
+            .control-label {
+                font-size: 0.8rem;
+            }
+            .info-row {
+                font-size: 0.8rem;
+                padding: 3px 0;
+            }
+            .chain-item {
+                font-size: 0.75rem;
+                padding: 5px 10px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .clock-wrapper {
+                width: 95vw; height: 95vw;
+            }
+            .time-inputs input {
+                width: 50px;
+            }
         }
     </style>
 </head>
@@ -185,6 +293,15 @@
 
     <div class="title">SWISS ASTRONOMICA</div>
     <div class="subtitle">瑞士天文钟 · 机械传动</div>
+
+    <!-- 移动端面板遮罩 -->
+    <div class="panel-overlay" id="panelOverlay"></div>
+
+    <!-- 移动端面板切换条 -->
+    <div class="panel-toggle" id="panelToggle">
+        <div class="panel-toggle-bar"></div>
+        <div class="panel-toggle-text">机芯调校</div>
+    </div>
 
     <div class="clock-container">
         <div class="clock-wrapper">
@@ -915,6 +1032,39 @@
             document.querySelectorAll('.gear-teeth rect').forEach(rect => {
                 rect.setAttribute('stroke-width', highlightOn ? '2' : '1');
             });
+        });
+
+        // ==================== 移动端面板抽屉交互 ====================
+        const panelToggle = document.getElementById('panelToggle');
+        const panelOverlay = document.getElementById('panelOverlay');
+        const controlPanel = document.querySelector('.control-panel');
+        let panelOpen = false;
+
+        function openPanel() {
+            panelOpen = true;
+            controlPanel.classList.add('open');
+            panelOverlay.classList.add('open');
+            panelToggle.style.opacity = '0';
+            panelToggle.style.pointerEvents = 'none';
+        }
+
+        function closePanel() {
+            panelOpen = false;
+            controlPanel.classList.remove('open');
+            panelOverlay.classList.remove('open');
+            panelToggle.style.opacity = '1';
+            panelToggle.style.pointerEvents = 'auto';
+        }
+
+        panelToggle.addEventListener('click', openPanel);
+        panelOverlay.addEventListener('click', closePanel);
+
+        // 面板内部点击不关闭，但点击按钮后关闭（移动端体验）
+        controlPanel.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' && window.innerWidth <= 640) {
+                // 小延迟后关闭，让用户看到反馈
+                setTimeout(closePanel, 250);
+            }
         });
 
         // 启动
